@@ -1,0 +1,28 @@
+-- Voters table
+CREATE TABLE voters (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id TEXT UNIQUE NOT NULL,      -- e.g., "S12345"
+    name TEXT NOT NULL,
+    public_key TEXT NOT NULL,              -- PEM or raw RSA public key as string
+    has_voted BOOLEAN DEFAULT 0            -- 0 = not yet voted, 1 = voted
+);
+
+-- Candidates table
+CREATE TABLE candidates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL              -- e.g., "Candidate_A"
+);
+
+-- Votes table
+CREATE TABLE votes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    voter_id INTEGER NOT NULL,             -- references voters.id
+    candidate_id INTEGER NOT NULL,         -- references candidates.id
+    vote_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (voter_id) REFERENCES voters (id) ON DELETE RESTRICT,
+    FOREIGN KEY (candidate_id) REFERENCES candidates (id) ON DELETE RESTRICT
+);
+
+-- Optional: Index for fast double‑vote checking and result counting
+CREATE INDEX idx_votes_voter_id ON votes (voter_id);
+CREATE INDEX idx_votes_candidate_id ON votes (candidate_id);
