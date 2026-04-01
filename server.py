@@ -4,7 +4,7 @@ import json
 import socket
 import mysql.connector
 from hashlib import sha256
-from rsa import generate_keys, encrypt, decrypt
+from rsa import generate_keys, decrypt
 import os
 
 # ---------------------------
@@ -12,7 +12,7 @@ import os
 # ---------------------------
 db = mysql.connector.connect(
     host     = "localhost",
-    port= 3308,
+    port = 3308 ,
     user     = "root",
     password = "",
     database = "voting_db"
@@ -49,9 +49,17 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         with conn:
             print(f"\n📩 Connection from {addr}")
 
-            # استقبال البيانات
+            # ---------------------------
+            # 4. Receive packet
+            # ---------------------------
             data = conn.recv(4096).decode()
-            packet = json.loads(data)
+
+            try:
+                packet = json.loads(data)
+            except json.JSONDecodeError:
+                conn.sendall("❌ Rejected: Invalid packet format!".encode())
+                print("❌ Invalid packet!")
+                continue
 
             student_id         = packet["student_id"]
             encrypted_vote     = packet["vote"]
@@ -61,7 +69,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             print(f"👤 Student ID: {student_id}")
 
             # ---------------------------
-            # 4. Check if already voted
+            # 5. Check if registered
             # ---------------------------
             cursor.execute(
                 "SELECT has_voted FROM voters WHERE student_id = %s",
@@ -74,19 +82,21 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 print("❌ Student not registered!")
                 continue
 
+            # ---------------------------
+            # 6. Check double vote
+            # ---------------------------
             if result[0] == 1:
                 conn.sendall("❌ Rejected: Already voted!".encode())
                 print("❌ Already voted!")
                 continue
 
             # ---------------------------
-            # 5. Verify signature ✅ FIXED
+            # 7. Verify signature
             # ---------------------------
-            vote_hash    = sha256(encrypted_vote.encode()).hexdigest()
-            hash_int     = int(vote_hash, 16) % student_public_key[1]
+            vote_hash     = sha256(encrypted_vote.encode()).hexdigest()
+            hash_int      = int(vote_hash, 16) % student_public_key[1]
 
-            # نفك التوقيع بالمفتاح العام للطالب
-            e, n         = student_public_key
+            e, n          = student_public_key
             hash_from_sig = pow(signature, e, n)
 
             if hash_from_sig != hash_int:
@@ -97,13 +107,23 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             print("✅ Signature verified!")
 
             # ---------------------------
-            # 6. Decrypt vote
+            # 8. Decrypt vote
             # ---------------------------
             real_vote = decrypt(encrypted_vote, server_private_key)
             print(f"🗳️  Vote revealed: {real_vote}")
 
             # ---------------------------
-            # 7. Count vote in database
+            # 9. Check valid candidate
+            # ---------------------------
+            cursor.execute(
+                "SELECT id FROM results WHERE candidate = %s",
+                (real_vote,)
+            )
+            if cursor.fetchone() is None:
+                conn.sendall("❌ Rejected: Invalid candidate!".encode())
+                print("❌ Invalid candidate!")
+                continue# ---------------------------
+            # 10. Count vote
             # ---------------------------
             cursor.execute(
                 "UPDATE results SET votes = votes + 1 WHERE candidate = %s",
@@ -117,14 +137,47 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             print("✅ Vote counted!")
 
             # ---------------------------
-            # 8. Show current results
+            # 11. Show current results
             # ---------------------------
-            cursor.execute("SELECT candidate, votes FROM results")
+            cursor.execute(
+                "SELECT candidate, votes FROM results ORDER BY votes DESC"
+            )
             rows = cursor.fetchall()
+
             print("\n📊 Current Results:")
-            print("-" * 25)
+            print("-" * 30)
             for row in rows:
                 print(f"  {row[0]}: {row[1]} votes")
-            print("-" * 25)
+            print("-" * 30)
 
-            conn.sendall("✅ Vote accepted and counted!".encode())
+            # ---------------------------
+            # 12. Show winner
+            # ---------------------------
+            winner       = rows[0]
+            winner_name  = winner[0]
+            winner_votes = winner[1]
+
+            print(f"\n🏆 Current Leader: {winner_name} ({winner_votes} votes)")
+
+            # ---------------------------
+            # 13. Check remaining voters
+            # ---------------------------
+            cursor.execute(
+                "SELECT COUNT(*) FROM voters WHERE has_voted = FALSE"
+            )
+            remaining = cursor.fetchone()[0]
+            print(f"⏳ Remaining voters: {remaining}")
+
+            if remaining == 0:
+                print("\n" + "=" * 30)
+                print("🎉 VOTING FINISHED!")
+                print(f"🏆 WINNER: {winner_name}")
+                print(f"   with {winner_votes} votes!")
+                print("=" * 30)
+                conn.sendall(
+                    f"✅ Vote counted! 🏆 FINAL WINNER: {winner_name} with {winner_votes} votes!".encode()
+                )
+            else:
+                conn.sendall(
+                    f"✅ Vote accepted! Current leader: {winner_name} ({winner_votes} votes). Remaining: {remaining}".encode()
+                )
