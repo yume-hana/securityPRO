@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E-Vote | Live Results</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --border: #1e1e2e;
+    --accent: #00ff88;
+    --accent2: #0066ff;
+    --danger: #ff3366;
+    --warning: #ffaa00;
+    --text: #e8e8f0;
+    --muted: #555570;
+    --card: #13131e;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,136,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,136,0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 60px 24px;
+  }
+  .header { margin-bottom: 48px; animation: fadeDown 0.8s ease both; }
+  .header-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,255,136,0.08);
+    border: 1px solid rgba(0,255,136,0.2);
+    border-radius: 100px;
+    padding: 6px 16px;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .live-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 1.5s infinite;
+  }
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(32px, 5vw, 48px);
+    font-weight: 800;
+    letter-spacing: -2px;
+    line-height: 1.1;
+  }
+  h1 span { color: var(--accent); }
+  .vote-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 20px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    text-decoration: none;
+    transition: all 0.25s;
+    letter-spacing: 1px;
+    margin-top: 8px;
+  }
+  .vote-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,255,136,0.05);
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 40px;
+    animation: fadeUp 0.8s 0.1s ease both;
+  }
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    transition: border-color 0.3s;
+  }
+  .stat-card:hover { border-color: rgba(0,255,136,0.15); }
+  .stat-label {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .stat-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -2px;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .stat-sub { font-size: 11px; color: var(--muted); }
+  .stat-value.green { color: var(--accent); }
+  .stat-value.blue  { color: #4488ff; }
+  .stat-value.warn  { color: var(--warning); }
+  .winner-banner {
+    background: linear-gradient(135deg, rgba(0,255,136,0.08), rgba(0,102,255,0.08));
+    border: 1px solid rgba(0,255,136,0.2);
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin-bottom: 32px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    animation: fadeUp 0.8s 0.2s ease both;
+    position: relative;overflow: hidden;
+  }
+  .winner-banner::before {
+    content: '🏆';
+    position: absolute;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 48px;
+    opacity: 0.1;
+  }
+  .winner-avatar {
+    width: 56px; height: 56px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 24px;
+    color: white;
+    flex-shrink: 0;
+  }
+  .winner-info { flex: 1; }
+  .winner-label {
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .winner-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 4px;
+  }
+  .winner-pct { font-size: 12px; color: var(--muted); }
+  .winner-pct span { color: var(--accent); font-weight: 500; }
+  .results-section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 24px;
+    animation: fadeUp 0.8s 0.3s ease both;
+  }
+  .results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  .results-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .refresh-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 14px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+  }
+  .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .result-row { margin-bottom: 28px; }
+  .result-row:last-child { margin-bottom: 0; }
+  .result-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .rank { font-size: 11px; color: var(--muted); width: 20px; text-align: center; }
+  .rank.first { color: var(--accent); }
+  .result-avatar {
+    width: 38px; height: 38px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    color: white;
+    flex-shrink: 0;
+  }
+  .result-name { flex: 1; font-family: 'Syne', sans-serif; font-weight: 600; font-size: 15px; }
+  .result-votes { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px; letter-spacing: -1px; }
+  .result-pct { font-size: 12px; color: var(--muted); text-align: right; min-width: 40px; }
+  .progress-track {
+    height: 6px;
+    background: var(--surface);
+    border-radius: 100px;
+    overflow: hidden;
+    margin-left: 32px;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 100px;
+    transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .activity {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    animation: fadeUp 0.8s 0.4s ease both;
+  }
+  .activity-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 20px; }
+  .activity-list { display: flex; flex-direction: column; gap: 12px; }
+  .activity-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--surface);
+    border-radius: 10px;
+    font-size: 12px;
+    border: 1px solid transparent;
+    transition: border-color 0.2s;
+  }
+  .activity-item:hover { border-color: var(--border); }
+  .activity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .activity-text { flex: 1; color: var(--muted); }
+  .activity-text strong { color: var(--text); }
+  .activity-time { color: var(--muted); font-size: 11px; }/* Winner Popup */
+  .winner-popup {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10,10,15,0.95);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+    text-align: center;
+  }
+  .winner-popup.show { display: flex; animation: fadeIn 0.4s ease; }
+  .popup-icon {
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    background: rgba(0,255,136,0.1);
+    border: 2px solid var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    box-shadow: 0 0 60px rgba(0,255,136,0.3);
+  }
+  .popup-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  .popup-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -2px;
+  }
+  .popup-votes { font-size: 16px; color: var(--muted); }
+  .popup-close {
+    margin-top: 16px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 28px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+  .popup-close:hover { border-color: var(--accent); color: var(--accent); }
+  .reveal-btn {
+    width: 100%;
+    padding: 18px;
+    background: var(--accent);
+    border: none;
+    border-radius: 12px;
+    color: var(--bg);
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.25s;
+    margin-top: 24px;
+  }
+  .reveal-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0,255,136,0.3);
+  }
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0,255,136,0.4); }
+    50%       { opacity: 0.6; box-shadow: 0 0 0 6px rgba(0,255,136,0); }
+  }
+  @media (max-width: 600px) {
+    .stats { grid-template-columns: 1fr 1fr; }
+    .stats .stat-card:last-child { grid-column: span 2; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <div class="badge"><span class="live-dot"></span> Live Results</div>
+    <div class="header-top">
+      <div>
+        <h1>Election<br><span>Dashboard</span></h1>
+      </div>
+      <a href="voting.html" class="vote-btn">← Back to Voting</a>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-label">Total Votes</div>
+      <div class="stat-value green" id="totalVotes">0</div>
+      <div class="stat-sub">votes cast</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Participation</div>
+      <div class="stat-value blue" id="participation">0%</div>
+      <div class="stat-sub">of registered</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Remaining</div>
+      <div class="stat-value warn" id="remaining">0</div>
+      <div class="stat-sub">yet to vote</div>
+    </div>
+  </div>
+
+  <div class="winner-banner">
+    <div class="winner-avatar" id="winnerAvatar">?</div>
+    <div class="winner-info">
+      <div class="winner-label" id="winnerLabel">🏆 Current Leader</div>
+      <div class="winner-name" id="winnerName">No votes yet</div>
+      <div class="winner-pct" id="winnerPct">Waiting for votes...</div>
+    </div>
+  </div>
+
+  <div class="results-section">
+    <div class="results-header">
+      <div class="results-title">Vote Breakdown</div>
+      <button class="refresh-btn" onclick="fetchResults()">↻ REFRESH</button>
+    </div><div class="result-row">
+      <div class="result-top">
+        <div class="rank" id="rankA">1</div>
+        <div class="result-avatar" style="background: linear-gradient(135deg, #0066ff, #00ff88)">A</div>
+        <div class="result-name">Candidate A</div>
+        <div class="result-votes" id="votesA">0</div>
+        <div class="result-pct" id="pctA">0%</div>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="barA" style="width:0%; background: linear-gradient(90deg, #0066ff, #00ff88)"></div>
+      </div>
+    </div>
+
+    <div class="result-row">
+      <div class="result-top">
+        <div class="rank" id="rankB">2</div>
+        <div class="result-avatar" style="background: linear-gradient(135deg, #ff6b35, #ff3366)">B</div>
+        <div class="result-name">Candidate B</div>
+        <div class="result-votes" id="votesB">0</div>
+        <div class="result-pct" id="pctB">0%</div>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="barB" style="width:0%; background: linear-gradient(90deg, #ff6b35, #ff3366)"></div>
+      </div>
+    </div>
+
+    <div class="result-row">
+      <div class="result-top">
+        <div class="rank" id="rankC">3</div>
+        <div class="result-avatar" style="background: linear-gradient(135deg, #a855f7, #6366f1)">C</div>
+        <div class="result-name">Candidate C</div>
+        <div class="result-votes" id="votesC">0</div>
+        <div class="result-pct" id="pctC">0%</div>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="barC" style="width:0%; background: linear-gradient(90deg, #a855f7, #6366f1)"></div>
+      </div>
+    </div>
+
+    <!-- زر الفائز -->
+    <button class="reveal-btn" onclick="showWinner()">
+      🏆 REVEAL WINNER
+    </button>
+
+  </div>
+
+  <div class="activity">
+    <div class="activity-title">Recent Activity</div>
+    <div class="activity-list" id="activityList">
+      <div class="activity-item">
+        <div class="activity-dot" style="background: var(--muted)"></div>
+        <div class="activity-text">Waiting for votes...</div>
+        <div class="activity-time">--:--</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Winner Popup -->
+<div class="winner-popup" id="winnerPopup">
+  <div class="popup-icon">🏆</div>
+  <div class="popup-label">Winner</div>
+  <div class="popup-name" id="popupName">---</div>
+  <div class="popup-votes" id="popupVotes">0 votes</div>
+  <button class="popup-close" onclick="closeWinner()">CLOSE</button>
+</div>
+
+<script>
+  const colors = { A: '#0066ff', B: '#ff3366', C: '#a855f7' };
+
+  async function fetchResults() {
+    try {
+      const res  = await fetch("http://127.0.0.1:8080/results");
+      if (!res.ok) return;
+
+      const data = await res.json();
+
+      // Stats
+      document.getElementById('totalVotes').textContent    = data.total;
+      document.getElementById('remaining').textContent     = data.remaining;
+      document.getElementById('participation').textContent =
+        data.registered > 0
+        ? Math.round((data.total / data.registered) * 100) + '%'
+        : '0%';
+
+      if (data.total === 0) return;
+
+      // Bars + votes
+      const max = Math.max(...data.results.map(r => r.votes), 1);
+      data.results.forEach(r => {
+        const letter = r.candidate.replace('Candidate_', '');
+        const pct    = Math.round((r.votes / data.total) * 100);
+        const bar    = Math.round((r.votes / max) * 100);
+
+        const votesEl = document.getElementById('votes' + letter);
+        const pctEl   = document.getElementById('pct'   + letter);
+        const barEl   = document.getElementById('bar'   + letter);
+
+        if (votesEl) votesEl.textContent = r.votes;
+        if (pctEl)   pctEl.textContent   = pct + '%';
+        if (barEl)   barEl.style.width   = bar + '%';
+      });// Ranks
+      const sorted = [...data.results].sort((a,b) => b.votes - a.votes);
+      sorted.forEach((r, i) => {
+        const letter  = r.candidate.replace('Candidate_', '');
+        const rankEl  = document.getElementById('rank' + letter);
+        if (rankEl) {
+          rankEl.textContent = i + 1;
+          rankEl.className   = i === 0 ? 'rank first' : 'rank';
+        }
+      });
+
+      // Winner banner
+      const winner = data.results[0];
+      const letter = winner.candidate.replace('Candidate_', '');
+      const wPct   = Math.round((winner.votes / data.total) * 100);
+
+      document.getElementById('winnerAvatar').textContent = letter;
+      document.getElementById('winnerName').textContent   = winner.candidate;
+      document.getElementById('winnerPct').innerHTML      =
+        "<span>" + wPct + "%</span> of votes - " + winner.votes + " total";
+
+      if (data.remaining === 0) {
+        document.getElementById('winnerLabel').textContent = '🏆 FINAL WINNER';
+        document.querySelector('.winner-banner').style.background =
+          'linear-gradient(135deg, rgba(0,255,136,0.15), rgba(0,102,255,0.15))';
+      }
+
+      // Activity
+      const now  = new Date().toLocaleTimeString('en', {
+        hour: '2-digit', minute: '2-digit'
+      });
+      const list = document.getElementById('activityList');
+      list.innerHTML = data.results.map(r => {
+        const l   = r.candidate.replace('Candidate_', '');
+        const col = colors[l] || '#888';
+        return '<div class="activity-item">' +
+          '<div class="activity-dot" style="background:' + col + '"></div>' +
+          '<div class="activity-text"><strong>' + r.candidate + '</strong> — ' + r.votes + ' votes</div>' +
+          '<div class="activity-time">' + now + '</div>' +
+          '</div>';
+      }).join('');
+
+    } catch(e) {
+      console.log("Server offline:", e);
+      document.getElementById('winnerName').textContent = '⚠️ Server offline';
+    }
+  }
+
+  function showWinner() {
+    fetch("http://127.0.0.1:8080/results")
+      .then(r => r.json())
+      .then(data => {
+        if (data.total === 0) {
+          alert("⚠️ No votes yet!");
+          return;
+        }
+        const winner = data.results[0];
+        const pct    = Math.round((winner.votes / data.total) * 100);
+        document.getElementById('popupName').textContent  = winner.candidate;
+        document.getElementById('popupVotes').textContent =
+          winner.votes + " votes - " + pct + "%";
+        document.getElementById('winnerPopup').classList.add('show');
+      })
+      .catch(() => alert("❌ Cannot connect to server!"));
+  }
+
+  function closeWinner() {
+    document.getElementById('winnerPopup').classList.remove('show');
+  }
+
+  fetchResults();
+  setInterval(fetchResults, 3000);
+</script>
+</body>
+</html>

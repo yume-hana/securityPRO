@@ -1,0 +1,579 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E-Vote | Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f; --surface: #111118; --border: #1e1e2e;
+    --accent: #00ff88; --accent2: #0066ff; --danger: #ff3366;
+    --warning: #ffaa00; --text: #e8e8f0; --muted: #555570; --card: #13131e;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; min-height: 100vh; }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image: linear-gradient(rgba(0,255,136,0.02) 1px,transparent 1px), linear-gradient(90deg,rgba(0,255,136,0.02) 1px,transparent 1px);
+    background-size: 40px 40px; pointer-events: none; z-index: 0;
+  }
+
+  /* LOGIN */
+  .login-page { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; background: var(--bg); }
+  .login-box { width: 100%; max-width: 420px; padding: 24px; animation: fadeUp 0.6s ease both; }
+  .login-logo { text-align: center; margin-bottom: 40px; }
+  .login-logo-text { font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800; letter-spacing: -2px; }
+  .login-logo-text span { color: var(--accent); }
+  .login-logo-sub { font-size: 11px; color: var(--muted); letter-spacing: 2px; margin-top: 4px; }
+  .login-card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 36px; }
+  .login-title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+  .login-desc { font-size: 11px; color: var(--muted); margin-bottom: 28px; }
+  .fl { display: block; font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 7px; }
+  .fi {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 13px 16px; color: var(--text);
+    font-family: 'DM Mono', monospace; font-size: 14px; outline: none; transition: all 0.3s;
+    margin-bottom: 16px;
+  }
+  .fi:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,255,136,0.08); }
+  .fi::placeholder { color: var(--muted); }
+  .login-btn { width: 100%; padding: 15px; background: var(--accent); border: none; border-radius: 10px; color: var(--bg); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 1px; cursor: pointer; transition: all 0.25s; }
+  .login-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,255,136,0.3); }
+  .login-error { background: rgba(255,51,102,0.1); border: 1px solid rgba(255,51,102,0.2); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: var(--danger); margin-top: 12px; display: none; }
+  .login-error.show { display: block; }
+
+  /* ADMIN */
+  .admin-page { display: none; }
+  .admin-page.show { display: flex; min-height: 100vh; position: relative; z-index: 1; }
+  .sidebar { width: 240px; background: var(--surface); border-right: 1px solid var(--border); padding: 32px 0; flex-shrink: 0; position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; }
+  .sidebar-logo { padding: 0 24px 28px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  .sidebar-logo-text { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; letter-spacing: -1px; }
+  .sidebar-logo-text span { color: var(--accent); }
+  .sidebar-logo-sub { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
+  .nav-section { font-size: 9px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; padding: 12px 24px 6px; }
+  .nav-item { display: flex; align-items: center; gap: 12px; padding: 11px 24px; cursor: pointer; transition: all 0.2s; font-size: 12px; letter-spacing: 1px; color: var(--muted); border-left: 2px solid transparent; }
+  .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(0,255,136,0.05); }
+  .sidebar-footer { margin-top: auto; padding: 20px 24px; border-top: 1px solid var(--border); }
+  .logout-btn { display: flex; align-items: center; gap: 8px; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; font-family: 'DM Mono', monospace; font-size: 11px; cursor: pointer; transition: all 0.2s; letter-spacing: 1px; width: 100%; }
+  .logout-btn:hover { border-color: var(--danger); color: var(--danger); }
+  .main { flex: 1; padding: 48px; overflow-y: auto; }
+  .page-header { margin-bottom: 32px; animation: fadeDown 0.6s ease both; }
+  .page-title { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; letter-spacing: -1px; margin-bottom: 6px; }
+  .page-title span { color: var(--accent); }
+  .page-desc { font-size: 12px; color: var(--muted); }
+  .tabs { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 4px; margin-bottom: 28px; width: fit-content; animation: fadeUp 0.6s 0.1s ease both; }
+  .tab { padding: 9px 20px; border-radius: 9px; font-size: 11px; letter-spacing: 1px; cursor: pointer; transition: all 0.2s; color: var(--muted); border: none; background: none; font-family: 'DM Mono', monospace; }
+  .tab.active { background: var(--accent); color: var(--bg); font-weight: 700; }
+  .panel { display: none; animation: fadeUp 0.4s ease both; }
+  .panel.active { display: block; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 26px; margin-bottom: 20px; transition: border-color 0.3s; }
+  .card:hover { border-color: rgba(0,255,136,0.1); }
+  .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+  .card-icon { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+  .ci-green { background: rgba(0,255,136,0.1); border: 1px solid rgba(0,255,136,0.2); }
+  .ci-blue  { background: rgba(0,102,255,0.1); border: 1px solid rgba(0,102,255,0.2); }
+  .ci-red   { background: rgba(255,51,102,0.1); border: 1px solid rgba(255,51,102,0.2); }
+  .card-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; }
+  .card-desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .fg { margin-bottom: 14px; }
+  .fgi { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 12px 14px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; outline: none; transition: all 0.3s; }
+  .fgi:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,255,136,0.08); }
+  .fgi::placeholder { color: var(--muted); }
+  textarea.fgi { height: 90px; resize: none; }
+  .hint { font-size: 10px; color: var(--muted); margin-top: 5px; }
+  .btn-primary { background: var(--accent); color: var(--bg); border: none; border-radius: 9px; padding: 13px; width: 100%; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 1px; cursor: pointer; transition: all 0.25s; }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,255,136,0.25); }
+  .btn-sm-danger { background: rgba(255,51,102,0.1); color: var(--danger); border: 1px solid rgba(255,51,102,0.2); border-radius: 7px; padding: 5px 12px; font-size: 10px; font-family: 'Syne', sans-serif; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+  .btn-sm-danger:hover { background: rgba(255,51,102,0.2); }
+  .btn-sm-blue { background: rgba(0,102,255,0.1); color: #4488ff; border: 1px solid rgba(0,102,255,0.2); border-radius: 7px; padding: 5px 12px; font-size: 10px; font-family: 'Syne', sans-serif; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+  .btn-sm-blue:hover { background: rgba(0,102,255,0.2); }
+  .stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 24px; }
+  .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .stat-val { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; letter-spacing: -1.5px; margin-bottom: 4px; }
+  .stat-label { font-size: 10px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; }
+  .list { display: flex; flex-direction: column; gap: 8px; }
+  .list-item { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; }
+  .list-av { width: 32px; height: 32px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 13px; color: white; flex-shrink: 0; }
+  .list-name { font-size: 12px; }
+  .list-sub { font-size: 10px; color: var(--muted); }
+  .sbadge { font-size: 9px; padding: 3px 9px; border-radius: 100px; letter-spacing: 1px; }
+  .sbadge-voted   { background: rgba(0,255,136,0.1); color: var(--accent); border: 1px solid rgba(0,255,136,0.2); }
+  .sbadge-pending { background: rgba(255,170,0,0.1); color: var(--warning); border: 1px solid rgba(255,170,0,0.2); }
+  .prog-track { height: 5px; background: var(--surface); border-radius: 100px; overflow: hidden; margin: 8px 0 0 28px; }
+  .prog-fill { height: 100%; border-radius: 100px; transition: width 1s cubic-bezier(0.4,0,0.2,1); }
+  .winner-popup { display: none; position: fixed; inset: 0; background: rgba(10,10,15,0.95); z-index: 300; align-items: center; justify-content: center; flex-direction: column; gap: 20px; text-align: center; }
+  .winner-popup.show { display: flex; animation: fadeIn 0.4s ease; }
+  .popup-icon { width: 90px; height: 90px; border-radius: 50%; background: rgba(0,255,136,0.1); border: 2px solid var(--accent); display: flex; align-items: center; justify-content: center; font-size: 44px; box-shadow: 0 0 60px rgba(0,255,136,0.25); }
+  .popup-label { font-size: 11px; color: var(--accent); letter-spacing: 3px; text-transform: uppercase; }
+  .popup-name { font-family: 'Syne', sans-serif; font-size: 40px; font-weight: 800; letter-spacing: -2px; }
+  .popup-votes { font-size: 14px; color: var(--muted); }
+  .popup-close { margin-top: 8px; background: transparent; border: 1px solid var(--border); border-radius: 9px; padding: 11px 26px; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; cursor: pointer; letter-spacing: 1px; transition: all 0.2s; }
+  .popup-close:hover { border-color: var(--accent); color: var(--accent); }
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; display: flex; align-items: center; gap: 10px; font-size: 12px; z-index: 400; transform: translateY(70px); opacity: 0; transition: all 0.3s; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-color: rgba(0,255,136,0.3); }
+  .toast.error   { border-color: rgba(255,51,102,0.3); }
+  .empty { text-align: center; padding: 28px; color: var(--muted); font-size: 11px; }
+  .empty-icon { font-size: 28px; margin-bottom: 10px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @keyframes fadeDown { from{opacity:0;transform:translateY(-16px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeUp   { from{opacity:0;transform:translateY(16px)}  to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeIn   { from{opacity:0} to{opacity:1} }
+  @media(max-width:900px){ .sidebar{display:none} .main{padding:24px} .grid-2{grid-template-columns:1fr} .stats{grid-template-columns:1fr 1fr} .two-col{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-page" id="loginPage">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-text">E<span>Vote</span></div>
+      <div class="login-logo-sub">Admin Access Only</div>
+    </div>
+    <div class="login-card">
+      <div class="login-title">Sign In</div>
+      <div class="login-desc">Restricted to administrators only</div>
+      <label class="fl">Username</label>
+      <input type="text" class="fi" id="loginUser" placeholder="admin" />
+      <label class="fl">Password</label>
+      <input type="password" class="fi" id="loginPass" placeholder="••••••••"
+        onkeydown="if(event.key==='Enter') doLogin()" />
+      <button class="login-btn" onclick="doLogin()">SIGN IN →</button>
+      <div class="login-error" id="loginError">❌ Invalid username or password</div>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div class="admin-page" id="adminPage">
+
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-text">E<span>Vote</span></div>
+      <div class="sidebar-logo-sub">Admin Panel</div>
+    </div>
+    <div class="nav-section">Management</div>
+    <div class="nav-item active" onclick="switchTab('candidates')">🎯 &nbsp;Candidates</div>
+    <div class="nav-item" onclick="switchTab('voters')">👥 &nbsp;Voters</div>
+    <div class="nav-section">Election</div>
+    <div class="nav-item" onclick="switchTab('results')">📊 &nbsp;Results</div>
+    <div class="nav-item" onclick="switchTab('control')">⚙️ &nbsp;Control</div>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="doLogout()">🚪 &nbsp;Logout</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="page-header">
+      <div class="page-title">Admin <span>Panel</span></div>
+      <div class="page-desc">Students cannot access this page</div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" id="tab-candidates" onclick="switchTab('candidates')">🎯 Candidates</button>
+      <button class="tab" id="tab-voters"    onclick="switchTab('voters')">👥 Voters</button>
+      <button class="tab" id="tab-results"   onclick="switchTab('results')">📊 Results</button>
+      <button class="tab" id="tab-control"   onclick="switchTab('control')">⚙️ Control</button>
+    </div>
+
+    <!-- CANDIDATES -->
+    <div class="panel active" id="panel-candidates">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon ci-green">🎯</div>
+            <div><div class="card-title">Add Candidate</div><div class="card-desc">Register a new candidate</div></div>
+          </div>
+          <div class="fg">
+            <label class="fl">Candidate Name</label>
+            <input type="text" class="fgi" id="candidateName" placeholder="e.g. Candidate_A" />
+            <div class="hint">Use underscore instead of spaces</div>
+          </div>
+          <button class="btn-primary" onclick="addCandidate()">+ ADD CANDIDATE</button>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon ci-blue">📋</div>
+            <div><div class="card-title">Registered Candidates</div><div class="card-desc" id="candidateCount">0 candidates</div></div>
+          </div>
+          <div class="list" id="candidateList">
+            <div class="empty"><div class="empty-icon">🎯</div>No candidates yet</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VOTERS -->
+    <div class="panel" id="panel-voters">
+      <div class="grid-2">
+
+        <!-- Add single voter with password -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon ci-green">👤</div>
+            <div><div class="card-title">Add Single Voter</div><div class="card-desc">With password</div></div>
+          </div>
+          <div class="fg">
+            <label class="fl">Student ID</label>
+            <input type="text" class="fgi" id="voterSingleId" placeholder="e.g. ali_benali" />
+          </div>
+          <div class="fg">
+            <label class="fl">Password</label>
+            <input type="password" class="fgi" id="voterSinglePass" placeholder="••••••••" />
+            <div class="hint">Student will use this to vote</div>
+          </div>
+          <button class="btn-primary" onclick="addSingleVoter()">+ ADD VOTER</button>
+        </div>
+
+        <!-- Add bulk voters -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon ci-blue">👥</div>
+            <div><div class="card-title">Add Multiple Voters</div><div class="card-desc">ID and password per line</div></div>
+          </div>
+          <div class="fg">
+            <label class="fl">Student IDs & Passwords</label>
+            <textarea class="fgi" id="voterBulk"
+              placeholder="ali_benali,pass123&#10;sara_mahmoud,pass456&#10;youssef_karim,pass789"></textarea>
+            <div class="hint">Format: student_id,password (one per line)</div>
+          </div>
+          <button class="btn-primary" onclick="addBulkVoters()">+ ADD ALL VOTERS</button>
+        </div>
+
+      </div>
+
+      <!-- Voters list -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon ci-blue">📋</div>
+          <div><div class="card-title">Registered Voters</div><div class="card-desc" id="voterCount">0 voters</div></div>
+          <button class="btn-sm-danger" onclick="resetVotes()" style="margin-left:auto">↺ Reset Votes</button>
+        </div>
+        <div class="list" id="voterList">
+          <div class="empty"><div class="empty-icon">👥</div>No voters yet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div class="panel" id="panel-results">
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-val" id="rTotal" style="color:var(--accent)">0</div>
+          <div class="stat-label">Total Votes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="rRegistered" style="color:#4488ff">0</div>
+          <div class="stat-label">Registered</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="rRemaining" style="color:var(--warning)">0</div>
+          <div class="stat-label">Remaining</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon ci-green">📊</div>
+          <div><div class="card-title">Vote Breakdown</div><div class="card-desc">Live standings</div></div>
+          <button class="btn-sm-blue" onclick="fetchResults()" style="margin-left:auto">↻ Refresh</button>
+        </div>
+        <div id="resultsList">
+          <div class="empty"><div class="empty-icon">🗳️</div>No votes yet</div>
+        </div>
+        <button class="btn-primary" onclick="showWinner()" style="margin-top:20px">🏆 REVEAL WINNER</button>
+      </div>
+    </div>
+
+    <!-- CONTROL -->
+    <div class="panel" id="panel-control">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon ci-red">⚙️</div>
+          <div><div class="card-title">Election Control</div><div class="card-desc">Manage the election</div></div>
+        </div>
+        <div class="list">
+          <div class="list-item">
+            <span style="font-size:20px">🔄</span>
+            <div style="flex:1">
+              <div class="list-name">Reset All Votes</div>
+              <div class="list-sub">Clear votes and start over</div>
+            </div>
+            <button class="btn-sm-danger" onclick="resetVotes()">Reset</button>
+          </div>
+          <div class="list-item">
+            <span style="font-size:20px">🗳️</span>
+            <div style="flex:1">
+              <div class="list-name">Voting Page</div>
+              <div class="list-sub">Open voting page for students</div>
+            </div>
+            <button class="btn-sm-blue" onclick="window.open('voting.html')">Open</button>
+          </div>
+          <div class="list-item">
+            <span style="font-size:20px">🌐</span>
+            <div style="flex:1">
+              <div class="list-name">Student Link</div>
+              <div class="list-sub" id="votingLink" style="color:var(--accent)">—</div>
+            </div>
+            <button class="btn-sm-blue" onclick="copyLink()">Copy</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Winner Popup -->
+<div class="winner-popup" id="winnerPopup">
+  <div class="popup-icon">🏆</div>
+  <div class="popup-label">Winner</div>
+  <div class="popup-name"  id="popupName">---</div>
+  <div class="popup-votes" id="popupVotes">0 votes</div>
+  <button class="popup-close" onclick="document.getElementById('winnerPopup').classList.remove('show')">CLOSE</button>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span id="toastIcon">✅</span>
+  <span id="toastMsg">Done!</span>
+</div>
+
+<script>
+  const API        = "http://127.0.0.1:8080";
+  const ADMIN_USER = "admin";
+  const ADMIN_PASS = "admin123"; // ← غيّري هذا!
+
+  const colors    = ['linear-gradient(135deg,#0066ff,#00ff88)','linear-gradient(135deg,#ff6b35,#ff3366)','linear-gradient(135deg,#a855f7,#6366f1)','linear-gradient(135deg,#ffaa00,#ff6b35)'];
+  const barColors = ['#0066ff','#ff3366','#a855f7','#ffaa00'];
+
+  // ── Login ──
+  function doLogin() {
+    const u = document.getElementById('loginUser').value.trim();
+    const p = document.getElementById('loginPass').value;
+    if (u === ADMIN_USER && p === ADMIN_PASS) {
+      document.getElementById('loginPage').style.display = 'none';
+      document.getElementById('adminPage').classList.add('show');
+      document.getElementById('votingLink').textContent =
+        window.location.href.replace('admin.html','') + 'voting.html';
+      fetchCandidates();
+    } else {
+      const err = document.getElementById('loginError');
+      err.classList.add('show');
+      setTimeout(() => err.classList.remove('show'), 3000);
+    }
+  }
+
+  function doLogout() {
+    document.getElementById('adminPage').classList.remove('show');
+    document.getElementById('loginPage').style.display = 'flex';
+    document.getElementById('loginUser').value = '';
+    document.getElementById('loginPass').value = '';
+  }
+
+  // ── Toast ──
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    document.getElementById('toastIcon').textContent = type === 'success' ? '✅' : '❌';
+    document.getElementById('toastMsg').textContent  = msg;
+    t.className = 'toast show ' + type;
+    setTimeout(() => t.className = 'toast', 3000);
+  }
+
+  // ── Tabs ──
+  function switchTab(name) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    document.getElementById('tab-'   + name).classList.add('active');
+    if (name === 'results')    fetchResults();
+    if (name === 'voters')     fetchVoters();
+    if (name === 'candidates') fetchCandidates();
+  }
+
+  // ── Candidates ──
+  async function addCandidate() {
+    const name = document.getElementById('candidateName').value.trim();
+    if (!name) { showToast('Enter a name!', 'error'); return; }
+    try {
+      const res  = await fetch(API + "/add_candidate", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({candidate:name}) });
+      const data = await res.json();
+      data.status === 'success'
+        ? (showToast(name + ' added!'), document.getElementById('candidateName').value='', fetchCandidates())
+        : showToast(data.message, 'error');
+    } catch(e) { showToast('Server offline!', 'error'); }
+  }
+
+  async function deleteCandidate(name) {
+    if (!confirm('Delete ' + name + '?')) return;
+    try {
+      await fetch(API + "/delete_candidate", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({candidate:name}) });
+      showToast(name + ' deleted!');
+      fetchCandidates();
+    } catch(e) { showToast('Server offline!', 'error'); }
+  }
+
+  async function fetchCandidates() {
+    try {
+      const res  = await fetch(API + "/results");
+      const data = await res.json();
+      const list = document.getElementById('candidateList');
+      document.getElementById('candidateCount').textContent = data.results.length + ' candidates';
+      if (data.results.length === 0) {
+        list.innerHTML = '<div class="empty"><div class="empty-icon">🎯</div>No candidates yet</div>';
+        return;
+      }
+      list.innerHTML = data.results.map((r,i) => {
+        const letter = r.candidate.replace('Candidate_','');
+        return '<div class="list-item">' +
+          '<div class="list-av" style="background:' + colors[i%colors.length] + '">' + letter + '</div>' +
+          '<div style="flex:1"><div class="list-name">' + r.candidate + '</div><div class="list-sub">' + r.votes + ' votes</div></div>' +
+          '<button class="btn-sm-danger" onclick="deleteCandidate(\'' + r.candidate + '\')">Delete</button>' +
+          '</div>';
+      }).join('');
+    } catch(e) {}
+  }
+
+  // ── Voters ──
+  async function addSingleVoter() {
+    const id   = document.getElementById('voterSingleId').value.trim();
+    const pass = document.getElementById('voterSinglePass').value.trim();
+    if (!id)   { showToast('Enter student ID!',  'error'); return; }
+    if (!pass) { showToast('Enter password!',     'error'); return; }
+    const ok = await addVoterAPI(id, pass, true);
+    if (ok) {
+      document.getElementById('voterSingleId').value   = '';
+      document.getElementById('voterSinglePass').value = '';
+      fetchVoters();
+    }
+  }
+
+  async function addBulkVoters() {
+    const raw = document.getElementById('voterBulk').value.trim();
+    if (!raw) { showToast('Enter student IDs!', 'error'); return; }
+    const lines = raw.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+    let ok = 0, fail = 0;
+    for (const line of lines) {
+      const parts = line.split(',');
+      if (parts.length < 2) { fail++; continue; }
+      const id   = parts[0].trim();
+      const pass = parts[1].trim();
+      (await addVoterAPI(id, pass, false)) ? ok++ : fail++;
+    }
+    showToast(ok + ' added!' + (fail > 0 ? ' ' + fail + ' failed (wrong format?).' : ''));
+    document.getElementById('voterBulk').value = '';
+    fetchVoters();
+  }
+
+  async function addVoterAPI(id, pass, notify) {
+    try {
+      const res  = await fetch(API + "/add_voter", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({student_id:id, password:pass}) });
+      const data = await res.json();
+      if (notify) { data.status==='success' ? showToast(id+' added!') : showToast(data.message,'error'); }
+      return data.status === 'success';
+    } catch(e) { if (notify) showToast('Server offline!','error'); return false; }
+  }
+
+  async function deleteVoter(id) {
+    if (!confirm('Delete ' + id + '?')) return;
+    try {
+      await fetch(API + "/delete_voter", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({student_id:id}) });
+      showToast(id + ' deleted!');
+      fetchVoters();
+    } catch(e) { showToast('Server offline!','error'); }
+  }
+
+  async function fetchVoters() {
+    try {
+      const res  = await fetch(API + "/voters");
+      const data = await res.json();
+      const list = document.getElementById('voterList');
+      document.getElementById('voterCount').textContent = data.voters.length + ' voters';
+      if (data.voters.length === 0) {
+        list.innerHTML = '<div class="empty"><div class="empty-icon">👥</div>No voters yet</div>';
+        return;
+      }
+      list.innerHTML = data.voters.map(v =>
+        '<div class="list-item">' +
+        '<div class="list-av" style="background:linear-gradient(135deg,#0066ff,#00ff88)">' + v.student_id.charAt(0).toUpperCase() + '</div>' +
+        '<div style="flex:1"><div class="list-name">' + v.student_id + '</div></div>' +
+        '<span class="sbadge ' + (v.has_voted ? 'sbadge-voted':'sbadge-pending') + '">' + (v.has_voted?'Voted':'Pending') + '</span>' +
+        '<button class="btn-sm-danger" onclick="deleteVoter(\'' + v.student_id + '\')" style="margin-left:8px">Del</button>' +
+        '</div>'
+      ).join('');
+    } catch(e) {}
+  }
+
+  // ── Results ──
+  async function fetchResults() {
+    try {
+      const res  = await fetch(API + "/results");
+      const data = await res.json();
+      document.getElementById('rTotal').textContent      = data.total;
+      document.getElementById('rRegistered').textContent = data.registered;
+      document.getElementById('rRemaining').textContent  = data.remaining;
+
+      const list = document.getElementById('resultsList');
+      if (data.total === 0) {
+        list.innerHTML = '<div class="empty"><div class="empty-icon">🗳️</div>No votes yet</div>';
+        return;
+      }
+      const max = Math.max(...data.results.map(r => r.votes), 1);
+      list.innerHTML = data.results.map((r,i) => {
+        const pct    = Math.round((r.votes / data.total) * 100);
+        const bar    = Math.round((r.votes / max) * 100);
+        const letter = r.candidate.replace('Candidate_','');
+        return '<div style="margin-bottom:18px">' +
+          '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">' +
+          '<span style="font-size:11px;color:var(--muted);width:16px">' + (i+1) + '</span>' +
+          '<div class="list-av" style="background:' + colors[i%colors.length] + ';width:30px;height:30px;font-size:12px">' + letter + '</div>' +
+          '<span style="font-family:Syne,sans-serif;font-weight:700;flex:1">' + r.candidate + '</span>' +
+          '<span style="font-family:Syne,sans-serif;font-weight:800;font-size:18px">' + r.votes + '</span>' +
+          '<span style="font-size:11px;color:var(--muted);min-width:36px;text-align:right">' + pct + '%</span>' +
+          '</div>' +
+          '<div class="prog-track"><div class="prog-fill" style="width:' + bar + '%;background:' + barColors[i%barColors.length] + '"></div></div>' +
+          '</div>';
+      }).join('');
+    } catch(e) {}
+  }
+
+  function showWinner() {
+    fetch(API + "/results").then(r => r.json()).then(data => {
+      if (data.total === 0) { alert('No votes yet!'); return; }
+      const winner = data.results[0];
+      const pct    = Math.round((winner.votes / data.total) * 100);
+      document.getElementById('popupName').textContent  = winner.candidate;
+      document.getElementById('popupVotes').textContent = winner.votes + ' votes — ' + pct + '%';
+      document.getElementById('winnerPopup').classList.add('show');
+    }).catch(() => alert('Server offline!'));
+  }
+
+  // ── Reset ──
+  async function resetVotes() {
+    if (!confirm('Reset ALL votes?')) return;
+    try {
+      await fetch(API + "/reset_votes", { method:"POST" });
+      showToast('All votes reset!');
+      fetchResults();
+      fetchVoters();
+    } catch(e) { showToast('Server offline!','error'); }
+  }
+
+  function copyLink() {
+    const link = window.location.href.replace('admin.html','') + 'voting.html';
+    navigator.clipboard.writeText(link).then(() => showToast('Link copied!'));
+  }
+
+  setInterval(() => {
+    if (document.getElementById('panel-results').classList.contains('active')) fetchResults();
+  }, 5000);
+</script>
+</body>
+</html>
